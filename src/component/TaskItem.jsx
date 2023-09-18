@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
 import { Item, Details, TaskTexts, TaskText, TaskActions, Icon } from "./styles/TaskItems.styled"
 import { MdDelete, MdEdit } from 'react-icons/md'
 import { deleteTask, updateTask } from "../features/tasks/tasksSlice"
@@ -11,6 +11,8 @@ import CheckBox from "./CheckBox"
 function TaskItem({ task }) {
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [checked, setChecked] = useState(false); // Initialize based on task.status
+  const authUser = useSelector(state => state.auth.user);
+
 
   const dispatch = useDispatch();
 
@@ -22,21 +24,34 @@ function TaskItem({ task }) {
   const handleDelete = () => {
     dispatch(deleteTask(task.id));
     toast.success('Task deleted successfully');
-  }
+    
+    // Remove the task from local storage
+    const userTasks = JSON.parse(localStorage.getItem(`tasks_${authUser.username}`)) || [];
+    const updatedTasks = userTasks.filter(t => t.id !== task.id);
+    localStorage.setItem(`tasks_${authUser.username}`, JSON.stringify(updatedTasks));
+}
 
   const handleEdit = () => {
     setUpdateModalOpen(true);
   }
 
   const handleCheck = () => {
-    const newChecked = !checked; // Toggle the checked state
-    setChecked(newChecked); // Update the local state first
+    const newChecked = !checked;
+    setChecked(newChecked);
 
     // Dispatch 'updateTask' with the updated 'status'
-    dispatch(
-      updateTask({ ...task, status: newChecked ? 'complete' : 'incomplete' })
-    );
-  };
+    dispatch(updateTask({ ...task, status: newChecked ? 'complete' : 'incomplete' }));
+
+    // Update the task's status in local storage
+    const userTasks = JSON.parse(localStorage.getItem(`tasks_${authUser.username}`)) || [];
+    const updatedTasks = userTasks.map(t => {
+        if (t.id === task.id) {
+            return { ...t, status: newChecked ? 'complete' : 'incomplete' };
+        }
+        return t;
+    });
+    localStorage.setItem(`tasks_${authUser.username}`, JSON.stringify(updatedTasks));
+  }
 
   return (
     <>

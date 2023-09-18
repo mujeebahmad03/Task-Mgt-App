@@ -3,7 +3,7 @@ import {StyledForm, FormTitle, FormContainer, FormWrapper, ButtonContainer, Clos
 import { MdOutlineClose } from "react-icons/md";
 import { Button } from './styles/Button.styled';
 import { useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { addTask, updateTask } from '../features/tasks/tasksSlice';
 import {v4 as uuid} from 'uuid';
 import toast from 'react-hot-toast';
@@ -17,6 +17,7 @@ function TaskModal({modalOpen, setModalOpen, type, task}) {
   
   const [title, setTitle] = useState('');
   const [status, setStatus] = useState('incomplete');
+  const authUser = useSelector(state => state.auth.user);
 
   const dispatch = useDispatch()
 
@@ -30,34 +31,44 @@ function TaskModal({modalOpen, setModalOpen, type, task}) {
     }
   }, [type, task, modalOpen])
 
-  const handleSubmit = e => {
+  // ...
+
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!title){
+
+    if (!title) {
         toast.error('Title should not be empty');
+        return;
     }
 
-    if(type === 'update'){
-      if(task.title !== title || task.completed !== (status === 'complete')){ // Convert 'status' to 'completed'
-        dispatch(updateTask({
-          ...task,
-          title, 
-          completed: status === 'complete', // Convert 'status' to 'completed'
-        }))
-      } else{
-        toast.error('No changes made')
-      }
-    } else{
-      if(title && status){
-        dispatch(addTask({
-          id: uuid(),
-          title,
-          completed: status === 'complete', // Convert 'status' to 'completed'
-        }));
+    const updatedTask = {
+        id: task ? task.id : uuid(),
+        title,
+        completed: status === 'complete',
+    };
+
+    if (type === 'update') {
+        dispatch(updateTask(updatedTask));
+        
+        // Update the task in local storage
+        const userTasks = JSON.parse(localStorage.getItem(`tasks_${authUser.username}`)) || [];
+        const updatedTasks = userTasks.map(t => (t.id === updatedTask.id ? updatedTask : t));
+        localStorage.setItem(`tasks_${authUser.username}`, JSON.stringify(updatedTasks));
+        toast.success('Task updated successfully');
+    } else {
+        dispatch(addTask(updatedTask));
+        
+        // Add the task to local storage
+        const userTasks = JSON.parse(localStorage.getItem(`tasks_${authUser.username}`)) || [];
+        userTasks.push(updatedTask);
+        localStorage.setItem(`tasks_${authUser.username}`, JSON.stringify(userTasks));
         toast.success('Task added successfully');
-      } 
     }
+
     setModalOpen(false);
   }
+
+
   return (
     <>
       {modalOpen && (

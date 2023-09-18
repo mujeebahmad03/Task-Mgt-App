@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useDispatch, useSelector } from 'react-redux';
 import { loginUser } from '../features/auth/authSlice';
+import { fetchTasks } from '../features/tasks/tasksSlice';
 import toast from "react-hot-toast"
 import {MdLock} from 'react-icons/md'
 import {BiSolidUser} from 'react-icons/bi';
@@ -21,7 +22,7 @@ export default function Login({ onLogin }) {
 
     const [loginData, setLoginData] = useState({ username: '', password: '' });
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
 
         // Dispatch the loginUser action
@@ -30,33 +31,32 @@ export default function Login({ onLogin }) {
         const savedUserData = JSON.parse(localStorage.getItem('users'));
 
         if (savedUserData) {
+            const matchingUser = savedUserData.find(user => user.username === loginData.username && user.password === loginData.password);
 
-            const matchingUser = savedUserData
-                .find(user => user.username === loginData.username 
-                    && user.password === loginData.password);
-
-            // User data exists in local storage, check if it matches login data
             if (matchingUser) {
-                // User data matches, perform the login action
                 toast.success('Login successful');
+
+                // Load the user's tasks based on their username
+                const userTasks = JSON.parse(localStorage.getItem(`tasks_${matchingUser.username}`)) || [];
+                
+                // Dispatch the fetched tasks to update the Redux state
+                dispatch(fetchTasks(userTasks));
 
                 // Call the callback function passed from the parent component
                 onLogin();
-                // After successful login or signup
                 localStorage.setItem('loggedInUser', JSON.stringify(matchingUser));
                 navigate('/dashboard');
-
-                // Clear the login form
             } else {
-                // User data exists but doesn't match login data
                 toast.error('Login failed. Please check your username and password.');
             }
         } else {
-            // User data does not exist in local storage, prompt the user to sign up
             toast.error('User does not exist. Please sign up.');
         }
         setLoginData({ username: '', password: '' });
     };
+
+// ...
+
 
     const handleChange = (e) => {
         const { name, value } = e.target;

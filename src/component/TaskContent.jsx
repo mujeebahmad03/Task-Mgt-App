@@ -9,28 +9,18 @@ function TaskContent() {
   const taskList = useSelector(state => state.tasks.tasks);
   const status = useSelector(state => state.tasks.status);
   const filterStatus = useSelector(state => state.tasks.filterStatus);
+  const authUser = useSelector(state => state.auth.user);
 
   const dispatch = useDispatch();
 
   // Fetch tasks from the API when the component mounts
   useEffect(() => {
-    dispatch(fetchTasks());
-  }, [dispatch]);
-
-  // Load tasks from localStorage and merge with tasks from the API
-  // useEffect(() => {
-  //   const savedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
-
-  //   // Filter out tasks that already exist in taskList
-  //   const newTasks = savedTasks.filter(savedTask => {
-  //     return !taskList.some(task => task.id === savedTask.id);
-  //   });
-
-  //   // Merge the new tasks with the existing taskList
-  //   if (newTasks.length > 0) {
-  //     dispatch(fetchTasks(newTasks));
-  //   }
-  // }, [dispatch, taskList]);
+    if (authUser) {
+      // Load tasks for the authenticated user based on their username
+      const userTasks = JSON.parse(localStorage.getItem(`tasks_${authUser.username}`)) || [];
+      dispatch(fetchTasks(userTasks));
+    }
+  }, [dispatch, authUser]);
 
   const filteredTaskList = taskList.filter(item => {
     if(filterStatus === 'all') return true;
@@ -44,7 +34,7 @@ function TaskContent() {
   if (status === "failed") {
     return <LoneText>Error loading tasks.</LoneText>;
   }
-  // console.log(filteredTaskList);
+
   return (
     <TaskWrapper>
       {filteredTaskList.length === 0 ? (
